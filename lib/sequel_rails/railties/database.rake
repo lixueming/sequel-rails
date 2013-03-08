@@ -1,4 +1,5 @@
 require 'sequel_rails/storage'
+require 'sequel/extensions/migration'
 
 # TODO: DRY these up
 namespace :db do
@@ -156,4 +157,32 @@ namespace :db do
   end
 end
 
+
+namespace :railties do
+  namespace :install do
+    # desc "Copies missing migrations from Railties (e.g. engines). You can specify Railties to use with FROM=railtie1,railtie2"
+    task :migrations => :'db:db_for_current_env' do
+      to_load = ENV['FROM'].blank? ? :all : ENV['FROM'].split(",").map {|n| n.strip }
+      railties = {}
+      Rails.application.railties.each do |railtie|
+        next unless to_load == :all || to_load.include?(railtie.railtie_name)
+
+        if railtie.respond_to?(:paths) && (path = railtie.paths['db/migrate'].first)
+          railties[railtie.railtie_name] = path
+        end
+      end
+
+      on_skip = Proc.new do |name, migration|
+        puts "NOTE: Migration #{migration.basename} from #{name} has been skipped. Migration with the same name already exists."
+      end
+
+      on_copy = Proc.new do |name, migration, old_path|
+        puts "Copied migration #{migration.basename} from #{name}"
+      end
+
+      ::Sequel::Migration.copy(Rails.application.paths['db/migrate'], railties,
+                                    :on_skip => on_skip, :on_copy => on_copy)
+    end
+  end
+end
 task "test:prepare" => "db:test:prepare"
