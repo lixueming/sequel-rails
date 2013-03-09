@@ -1,6 +1,6 @@
 require 'sequel_rails/storage'
 require 'sequel/extensions/migration'
-
+require 'active_record'
 # TODO: DRY these up
 namespace :db do
   def db_for_current_env
@@ -180,7 +180,7 @@ namespace :railties do
         puts "Copied migration #{migration.basename} from #{name}"
       end
 
-      ::Sequel::Migration.copy(Rails.application.paths['db/migrate'], railties,
+      ActiveRecord::Migration.copy(Rails.application.paths['db/migrate'], railties,
                                     :on_skip => on_skip, :on_copy => on_copy)
     end
   end
